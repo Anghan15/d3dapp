@@ -1,3 +1,5 @@
+#include <map>
+#include <type_traits>
 #include "../d3dapp/D3DApp.h"
 
 class TerrainRender : public d3dapp::Render {
@@ -11,7 +13,7 @@ int WINAPI _tWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,
   TerrainRender render;
   d3dapp::D3DApp::Desc desc{};
   desc.instance = hInstance;
-  desc.title = TEXT("CDLOD sample");
+  desc.title = TEXT("App Test Sample");
   desc.width = 1280;
   desc.height = 800;
   desc.window_style = WS_OVERLAPPEDWINDOW & ~(WS_MAXIMIZEBOX | WS_THICKFRAME);

@@ -13,9 +13,12 @@
 namespace d3dapp {
 class Render {
  public:
-  virtual void OnCreate(ID3D12Device* device, void* data) = 0;
+  virtual LRESULT OnMessage(HWND hwnd, UINT message, WPARAM wParam,
+                            LPARAM lParam);
+  virtual void OnCreate(ID3D12Device* device, void* data);
   virtual void OnRender(int frame_index,
-                        ID3D12GraphicsCommandList* command_list) = 0;
+                        ID3D12GraphicsCommandList* command_list);
+  virtual ~Render();
 };
 
 class D3DApp {
@@ -32,10 +35,8 @@ class D3DApp {
     Render* render;
     void* data;
   };
-  using Deleter = void (*)(D3DApp*);
-  static std::unique_ptr<D3DApp, Deleter> Create(const Desc& desc);
-  static void Destroy(D3DApp* app);
 
+  static std::shared_ptr<D3DApp> Create(const Desc& desc);
   void Run();
 
  private:
@@ -46,6 +47,7 @@ class D3DApp {
 
   static constexpr int kRenderTargetCount = 2;
 
+  static void Destroy(D3DApp* app);
   D3DApp();
   D3DApp(const D3DApp&) = delete;
   D3DApp& operator=(const D3DApp&) = delete;
@@ -59,7 +61,9 @@ class D3DApp {
 
   void WaitForGPU();
   void RenderFrame();
+  LRESULT OnMessage(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
+  static std::shared_ptr<D3DApp> sUniqueApp;
   Microsoft::WRL::ComPtr<ID3D12Device> device_;
   Microsoft::WRL::ComPtr<ID3D12Fence> fence_;
   Microsoft::WRL::ComPtr<ID3D12CommandQueue> command_queue_;

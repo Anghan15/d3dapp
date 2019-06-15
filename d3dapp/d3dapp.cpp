@@ -184,8 +184,21 @@ bool CreateD3DResources(
 }  // namespace
 
 namespace d3dapp {
-std::unique_ptr<D3DApp, D3DApp::Deleter> D3DApp::Create(
-    const D3DApp::Desc& desc) {
+LRESULT Render::OnMessage(HWND hwnd, UINT message, WPARAM wParam,
+                          LPARAM lParam) {
+  return DefWindowProc(hwnd, message, wParam, lParam);
+}
+void Render::OnCreate(ID3D12Device* device, void* data) {}
+void Render::OnRender(int frame_index,
+                      ID3D12GraphicsCommandList* command_list) {}
+Render::~Render() {}
+
+std::shared_ptr<D3DApp> D3DApp::sUniqueApp{nullptr, D3DApp::Destroy};
+
+std::shared_ptr<D3DApp> D3DApp::Create(const D3DApp::Desc& desc) {
+  if (nullptr != sUniqueApp) {
+    return sUniqueApp;
+  }
   UINT dxgi_flags = 0;
 #if defined(DEBUG) || defined(_DEBUG)
   ComPtr<ID3D12Debug> debug;
@@ -213,7 +226,9 @@ std::unique_ptr<D3DApp, D3DApp::Deleter> D3DApp::Create(
   CreateD3DResources(desc.frame_count, device.Get(), fence, command_queue,
                      command_list, allocators);
 
-  std::unique_ptr<D3DApp, D3DApp::Deleter> app{new D3DApp{}, Destroy};
+  std::shared_ptr<D3DApp> app{new D3DApp{}, Destroy};
+  sUniqueApp = app;
+  app->render_ = desc.render;
   HWND window = CreateD3DWindow(desc.instance, desc.title, desc.width,
                                 desc.height, desc.window_style,
                                 desc.window_style_ex, WindowProc, app.get());
@@ -272,7 +287,6 @@ std::unique_ptr<D3DApp, D3DApp::Deleter> D3DApp::Create(
   app->scissor_rect_.bottom = desc.height;
 
   app->clear_color_ = desc.clear_color;
-  app->render_ = desc.render;
   app->frame_count_ = desc.frame_count;
   desc.render->OnCreate(device.Get(), desc.data);
 
@@ -304,29 +318,7 @@ D3DApp::~D3DApp() {
 
 LRESULT CALLBACK D3DApp::WindowProc(HWND hwnd, UINT message, WPARAM wParam,
                                     LPARAM lParam) {
-  switch (message) {
-    case WM_LBUTTONDOWN: {
-      PostMessage(hwnd, WM_NCLBUTTONDOWN, HTCAPTION, lParam);
-      break;
-    }
-    case WM_KEYUP: {
-      if (VK_ESCAPE == wParam) {
-        DestroyWindow(hwnd);
-      }
-      break;
-    }
-    case WM_DESTROY: {
-      D3DApp* app =
-          reinterpret_cast<D3DApp*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
-      app->WaitForGPU();
-      PostQuitMessage(0);
-      break;
-    }
-    default:
-      return DefWindowProc(hwnd, message, wParam, lParam);
-  }
-
-  return 0;
+  return D3DApp::sUniqueApp->OnMessage(hwnd, message, wParam, lParam);
 }
 
 D3D12_CPU_DESCRIPTOR_HANDLE D3DApp::CurrentRenderTargetDescriptor() {
@@ -394,6 +386,29 @@ void D3DApp::RenderFrame() {
 
   frame_index_ = (frame_index_ + 1) % frame_count_;
   back_buffer_index_ = (back_buffer_index_ + 1) % kRenderTargetCount;
+}
+
+LRESULT D3DApp::OnMessage(HWND hwnd, UINT message, WPARAM wParam,
+                          LPARAM lParam) {
+  switch (message) {
+    case WM_LBUTTONDOWN: {
+      PostMessage(hwnd, WM_NCLBUTTONDOWN, HTCAPTION, lParam);
+      break;
+    }
+    case WM_KEYUP: {
+      if (VK_ESCAPE == wParam) {
+        DestroyWindow(hwnd);
+      }
+      break;
+    }
+    case WM_DESTROY: {
+      WaitForGPU();
+      PostQuitMessage(0);
+      break;
+    }
+  }
+
+  return render_->OnMessage(hwnd, message, wParam, lParam);
 }
 
 }  // namespace d3dapp
