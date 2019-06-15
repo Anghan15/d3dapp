@@ -17,7 +17,7 @@ int WINAPI _tWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,
   desc.window_style = WS_OVERLAPPEDWINDOW & ~(WS_MAXIMIZEBOX | WS_THICKFRAME);
   desc.window_style_ex = 0;
   desc.frame_count = 3;
-  desc.clear_color = DirectX::Colors::DarkGray;
+  desc.clear_color = DirectX::Colors::Black;
   desc.render = &render;
   desc.data = nullptr;
 
