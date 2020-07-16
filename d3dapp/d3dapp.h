@@ -6,8 +6,10 @@
 #include <DirectXColors.h>
 #include <d3dx12.h>
 #include <dxgi1_4.h>
+
 #include <memory>
 #include <vector>
+
 #include "framework.h"
 
 namespace d3dapp {
@@ -24,14 +26,14 @@ class Render {
 class D3DApp {
  public:
   struct Desc {
-    const TCHAR* title;
-    HINSTANCE instance;
-    int width;
-    int height;
-    DWORD window_style;
-    DWORD window_style_ex;
-    int frame_count;
-    DirectX::XMVECTORF32 clear_color;
+    const TCHAR* title{TEXT("D3D App")};
+    HINSTANCE instance{nullptr};
+    int width{800};
+    int height{600};
+    DWORD window_style{WS_OVERLAPPEDWINDOW & ~(WS_MAXIMIZEBOX | WS_THICKFRAME)};
+    DWORD window_style_ex{0};
+    int frame_count{2};
+    DirectX::XMVECTORF32 clear_color{};
     Render* render;
     void* data;
   };
@@ -63,7 +65,7 @@ class D3DApp {
   void RenderFrame();
   LRESULT OnMessage(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
-  static std::shared_ptr<D3DApp> sUniqueApp;
+  thread_local static std::shared_ptr<D3DApp> tlsAppInstance;
   Microsoft::WRL::ComPtr<ID3D12Device> device_;
   Microsoft::WRL::ComPtr<ID3D12Fence> fence_;
   Microsoft::WRL::ComPtr<ID3D12CommandQueue> command_queue_;

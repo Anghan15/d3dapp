@@ -193,12 +193,11 @@ void Render::OnRender(int frame_index,
                       ID3D12GraphicsCommandList* command_list) {}
 Render::~Render() {}
 
-std::shared_ptr<D3DApp> D3DApp::sUniqueApp{nullptr, D3DApp::Destroy};
+/////////////////////////////////////////////////////////////////////////////
+thread_local std::shared_ptr<D3DApp> D3DApp::tlsAppInstance{nullptr,
+                                                            D3DApp::Destroy};
 
 std::shared_ptr<D3DApp> D3DApp::Create(const D3DApp::Desc& desc) {
-  if (nullptr != sUniqueApp) {
-    return sUniqueApp;
-  }
   UINT dxgi_flags = 0;
 #if defined(DEBUG) || defined(_DEBUG)
   ComPtr<ID3D12Debug> debug;
@@ -227,7 +226,7 @@ std::shared_ptr<D3DApp> D3DApp::Create(const D3DApp::Desc& desc) {
                      command_list, allocators);
 
   std::shared_ptr<D3DApp> app{new D3DApp{}, Destroy};
-  sUniqueApp = app;
+  tlsAppInstance = app;
   app->render_ = desc.render;
   HWND window = CreateD3DWindow(desc.instance, desc.title, desc.width,
                                 desc.height, desc.window_style,
@@ -243,9 +242,9 @@ std::shared_ptr<D3DApp> D3DApp::Create(const D3DApp::Desc& desc) {
 
   // depth stencil
   ComPtr<ID3D12Resource> depth_stencil_buffer;
-  ComPtr<ID3D12DescriptorHeap> dsv_destriptor;
+  ComPtr<ID3D12DescriptorHeap> dsv_desctriptor;
   CreateDepthStencilBuffer(device.Get(), desc.width, desc.height,
-                           depth_stencil_buffer, dsv_destriptor);
+                           depth_stencil_buffer, dsv_desctriptor);
 
   ///////////////////////////////////////////////////////////////
   app->device_ = device;
@@ -254,7 +253,7 @@ std::shared_ptr<D3DApp> D3DApp::Create(const D3DApp::Desc& desc) {
   app->command_list_ = command_list;
 
   for (auto& i : allocators) {
-    app->frame_resources_.push_back(FrameResource{});
+    app->frame_resources_.emplace_back();
     app->frame_resources_.back().command_allocator = i;
   }
 
@@ -265,7 +264,7 @@ std::shared_ptr<D3DApp> D3DApp::Create(const D3DApp::Desc& desc) {
   }
 
   app->depth_stencil_ = depth_stencil_buffer;
-  app->dsv_descriptor_ = dsv_destriptor;
+  app->dsv_descriptor_ = dsv_desctriptor;
 
   app->rtv_descriptor_size_ =
       device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
@@ -318,7 +317,7 @@ D3DApp::~D3DApp() {
 
 LRESULT CALLBACK D3DApp::WindowProc(HWND hwnd, UINT message, WPARAM wParam,
                                     LPARAM lParam) {
-  return D3DApp::sUniqueApp->OnMessage(hwnd, message, wParam, lParam);
+  return D3DApp::tlsAppInstance->OnMessage(hwnd, message, wParam, lParam);
 }
 
 D3D12_CPU_DESCRIPTOR_HANDLE D3DApp::CurrentRenderTargetDescriptor() {

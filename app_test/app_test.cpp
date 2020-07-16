@@ -1,5 +1,3 @@
-#include <map>
-#include <type_traits>
 #include "../d3dapp/D3DApp.h"
 
 class TerrainRender : public d3dapp::Render {
